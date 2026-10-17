@@ -57,6 +57,21 @@ std::vector<unsigned char> generatePasswordHash(
     }
 
     return hash;
+    // PKCS5_PBKDF2_HMAC(
+//     password_bytes,        // const char*        → raw password data (text origin, binary-safe)
+//     password_length,       // int                → exact number of bytes to read from the start of the array
+//     salt_bytes,            // const unsigned char* → raw salt bytes (0–255 entropy)
+//     salt_length,           // int                → exact number of salt bytes
+//     iteration_count,       // int                → work factor (slows brute force)
+//     hash_function,         // const EVP_MD*      → e.g. EVP_sha256()
+//     output_key_length,     // int                → number of bytes to generate
+//     output_buffer          // unsigned char*     → where derived key is written
+// );
+
+// pointer + explicit length = binary-safe
+// null terminators are ignored
+// internal explicitily initialized'\0' bytes are valid data
+// returns a int, 1 for success, 0 for failure, failure is a complete failure that can't be redone
 }
 
 bool constantTimeEqual(
