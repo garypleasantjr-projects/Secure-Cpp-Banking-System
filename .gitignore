@@ -1,0 +1,5 @@
+/build/
+/data/accounts.db
+/data/audit.log
+*.tmp
+.DS_Store
