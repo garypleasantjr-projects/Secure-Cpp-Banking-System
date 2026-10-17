@@ -9,6 +9,7 @@ find_package(OpenSSL REQUIRED)
 
 add_library(bankcore
     src/Account.cpp
+    src/BankingUI.cpp
     src/AccountManager.cpp
     src/AuditLogger.cpp
     src/Crypto.cpp
