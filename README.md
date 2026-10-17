@@ -167,10 +167,10 @@ Authoritative references used for the security design discussion:
 ## Project Structure
 
 ```text
-Secure-Cpp_Banking-System/
+Secure-Cpp-Banking-System/
 ├── CMakeLists.txt
 ├── README.md
-├── SECURITY.md
+├── SECURITY_DESIGN.md
 ├── LEARNING_GUIDE.md
 ├── .gitignore
 ├── data/
