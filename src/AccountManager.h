@@ -18,11 +18,15 @@ private:
         std::chrono::steady_clock::time_point lockedUntil{};
     };
 
+    // This vector owns all Account objects in memory.
     std::vector<Account> accounts;
     std::string databaseFileName;
+    // Reference: use main's logger rather than creating a copy.
     AuditLogger& logger;
+    // Failed-attempt counters and lockout times are stored only in memory.
     std::unordered_map<std::string, LoginAttemptState> loginAttempts;
 
+    // Non-owning pointer; nullptr means the username was not found.
     Account* findAccount(const std::string& username);
     const Account* findAccount(const std::string& username) const;
 

@@ -5,12 +5,15 @@
 #include <string>
 #include <vector>
 
+// An Account owns its balance and password-verification information.
 class Account {
 private:
     std::string username;
+    // Raw salt bytes, not text; each new password gets a random salt.
     std::vector<unsigned char> salt;
     std::vector<unsigned char> passwordHash;
     int passwordIterations;
+    // Store money as integer cents rather than floating-point dollars.
     std::int64_t balanceCents;
     int primaryIDType;
     std::string idLastFour;
