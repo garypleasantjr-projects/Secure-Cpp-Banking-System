@@ -9,7 +9,8 @@
 #include <iostream>
 #include <string>
 
-// Private helpers are visible only inside this source file.
+// private helpers are visible only inside this source file.
+// PRIVATE USER-INTERFACE HELPERS
 namespace {
 
 std::string idTypeName(int idType) {
@@ -21,6 +22,7 @@ std::string idTypeName(int idType) {
     }
 }
 
+///// MAIN BANKING OPTIONS /////
 void printMainMenu() {
     std::cout << "\n========================================\n"
               << "      GARY'S SECURE BANKING DEMO\n"
@@ -31,21 +33,22 @@ void printMainMenu() {
               << "----------------------------------------\n";
 }
 
-// Collect a new account's information; the manager performs the actual save.
+// collect a new account's information; the manager performs the actual save.
+///// ACCOUNT CREATION INPUT FLOW /////
 void createAccountFlow(AccountManager& manager) {
     std::string username;
     while (true) {
-        username = InputHandling::readLine("New username: ");
+        username = InputHandling::readLine("New username: "); // retry until the username passes validation
 
-        // If the username is invalid, show a message and continue the input loop.
+        // if the username is invalid, show a message and continue the input loop.
         if (!InputHandling::validateUsername(username)) {
             std::cout << "[SYSTEM] Username must be 3-24 characters and contain only "
                          "letters, numbers, '.', '_' or '-'.\n";
             continue;
         }
 
-        // Even valid characters cannot make a username that already exists.
-        if (manager.checkDuplicateUsernames(username)) {
+        // even valid characters cannot make a username that already exists.
+        if (manager.checkDuplicateUsernames(username)) { // check if the username is already taken
             std::cout << "[SYSTEM] That username is already taken.\n";
             continue;
         }
@@ -62,7 +65,7 @@ void createAccountFlow(AccountManager& manager) {
             continue;
         }
 
-        const std::string confirmation = InputHandling::readLine("Confirm password: ");
+        const std::string confirmation = InputHandling::readLine("Confirm password: "); // make sure both passwords match
         if (password != confirmation) {
             std::cout << "[SYSTEM] Passwords did not match.\n";
             continue;
@@ -101,7 +104,8 @@ void createAccountFlow(AccountManager& manager) {
     }
 }
 
-// The Account reference points to the account authenticated by the manager.
+// the Account reference points to the account authenticated by the manager.
+// LOGGED-IN USER MENU
 void loggedInMenu(AccountManager& manager, Account& account, AuditLogger& logger) {
     while (true) {
         std::cout << "\n========================================\n"
@@ -173,7 +177,7 @@ void loggedInMenu(AccountManager& manager, Account& account, AuditLogger& logger
                 break;
             }
 
-            // Keep a copy of the password state for an in-memory rollback after a save failure.
+            // keep a copy of the password state for an in-memory rollback after a save failure.
             const Account oldAccount = account;
             account.changePassword(newPassword);
 
@@ -181,7 +185,7 @@ void loggedInMenu(AccountManager& manager, Account& account, AuditLogger& logger
                 logger.log("PASSWORD_CHANGED", account.getUsername());
                 std::cout << "[SYSTEM] Password updated with a new salt and current work factor.\n";
             } else {
-                account = oldAccount;
+                account = oldAccount; // restore the previous in-memory account on save failure
                 std::cout << "[SYSTEM] Password change was rolled back because it could not be saved.\n";
             }
         }
@@ -200,6 +204,7 @@ void loggedInMenu(AccountManager& manager, Account& account, AuditLogger& logger
     }
 }
 
+// LOGIN INPUT AND AUTHENTICATION
 void loginFlow(AccountManager& manager, AuditLogger& logger) {
     const std::string username = InputHandling::readLine("Username: ");
     const std::string password = InputHandling::readLine("Password: ");
@@ -208,7 +213,7 @@ void loginFlow(AccountManager& manager, AuditLogger& logger) {
     Account* account = manager.authenticateUser(username, password, statusMessage);
     std::cout << "[SYSTEM] " << statusMessage << '\n';
 
-    // Only show account operations when authentication returns a valid pointer.
+    // only show account operations when authentication returns a valid pointer.
     if (account != nullptr) {
         loggedInMenu(manager, *account, logger);
     }
@@ -216,9 +221,10 @@ void loginFlow(AccountManager& manager, AuditLogger& logger) {
 
 } // namespace
 
+// PUBLIC BANKING UI NAMESPACE
 namespace BankingUI {
 
-// This function runs the application's main menu until Exit is selected.
+// this function runs the application's main menu until Exit is selected.
 void run(AccountManager& manager, AuditLogger& logger) {
     std::cout << "Created by Gary Pleasant\n"
               << "Educational secure-coding project - NOT a real banking system.\n"

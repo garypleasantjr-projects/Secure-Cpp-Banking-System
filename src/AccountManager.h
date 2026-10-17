@@ -11,25 +11,28 @@
 #include <unordered_map>
 #include <vector>
 
+// ACCOUNT MANAGER - MULTIPLE ACCOUNTS AND PERSISTENCE
 class AccountManager {
 private:
+    ///// LOGIN ATTEMPT AND LOCKOUT STATE /////
     struct LoginAttemptState {
         int failedAttempts = 0;
         std::chrono::steady_clock::time_point lockedUntil{};
     };
 
-    // This vector owns all Account objects in memory.
+    // this vector owns all Account objects in memory.
     std::vector<Account> accounts;
-    std::string databaseFileName;
-    // Reference: use main's logger rather than creating a copy.
+    std::string databaseFileName; // path of the flat-file database
+    // reference: use main's logger rather than creating a copy.
     AuditLogger& logger;
-    // Failed-attempt counters and lockout times are stored only in memory.
+    // failed-attempt counters and lockout times are stored only in memory.
     std::unordered_map<std::string, LoginAttemptState> loginAttempts;
 
-    // Non-owning pointer; nullptr means the username was not found.
+    // non-owning pointer; nullptr means the username was not found.
     Account* findAccount(const std::string& username);
     const Account* findAccount(const std::string& username) const;
 
+///// PUBLIC ACCOUNT MANAGEMENT OPERATIONS /////
 public:
     static constexpr int MAX_FAILED_ATTEMPTS = 5;
     static constexpr int LOCKOUT_SECONDS = 30;

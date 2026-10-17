@@ -6,11 +6,13 @@
 #include <iomanip>
 #include <sstream>
 
+// AUDIT LOGGER CONSTRUCTOR
 AuditLogger::AuditLogger(const std::string& logFileName)
     : logFileName(logFileName) {}
 
+// WRITE A TIME-STAMPED EVENT TO THE LOG
 void AuditLogger::log(const std::string& event, const std::string& username) const {
-    // Append to the log instead of overwriting earlier events.
+    // append to the log instead of overwriting earlier events.
     std::ofstream logFile(logFileName, std::ios::app);
     if (!logFile) {
         return; // Logging failure must not crash the banking demo.
@@ -20,7 +22,7 @@ void AuditLogger::log(const std::string& event, const std::string& username) con
     const std::time_t nowTime = std::chrono::system_clock::to_time_t(now);
 
     std::tm localTime{};
-// Choose the platform's supported thread-safe local-time conversion.
+// choose the platform's supported thread-safe local-time conversion.
 #if defined(_WIN32)
     localtime_s(&localTime, &nowTime);
 #else
@@ -30,10 +32,10 @@ void AuditLogger::log(const std::string& event, const std::string& username) con
     logFile << std::put_time(&localTime, "%Y-%m-%d %H:%M:%S")
             << " | " << event;
 
-    // Include the username only when the event relates to an account.
+    // include the username only when the event relates to an account.
     if (!username.empty()) {
         logFile << " | user=" << username;
     }
 
-    logFile << '\n';
+    logFile << '\n'; // end this log entry with a newline
 }

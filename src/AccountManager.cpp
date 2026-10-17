@@ -10,11 +10,12 @@
 #include <filesystem>
 #include <system_error>
 
+// FILE-LOCAL DATABASE HELPERS
 namespace {
-// Version marker: older or corrupted formats cannot silently be treated as valid.
+// version marker: older or corrupted formats cannot silently be treated as valid.
 constexpr const char* DATABASE_HEADER = "SECURE_BANK_DB_V1";
 
-// Divide the saved line into its pipe-separated fields.
+// divide the saved line into its pipe-separated fields.
 std::vector<std::string> split(const std::string& line, char delimiter) {
     std::vector<std::string> parts;
     std::stringstream stream(line);
@@ -34,7 +35,7 @@ AccountManager::AccountManager(const std::string& databaseFileName, AuditLogger&
 Account* AccountManager::findAccount(const std::string& username) {
     for (Account& account : accounts) {
         if (account.getUsername() == username) {
-            return &account;
+            return &account; // return the address of the matching Account
         }
     }
     return nullptr;
@@ -53,6 +54,7 @@ bool AccountManager::checkDuplicateUsernames(const std::string& username) const 
     return findAccount(username) != nullptr;
 }
 
+///// ACCOUNT CREATION AND INITIAL SAVE /////
 bool AccountManager::createAccount(
     const std::string& username,
     const std::string& password,
@@ -65,7 +67,7 @@ bool AccountManager::createAccount(
     }
 
     try {
-        // Construct a new Account directly inside the manager's vector.
+        // construct a new Account directly inside the manager's vector.
         accounts.emplace_back(
             username,
             password,
@@ -74,9 +76,9 @@ bool AccountManager::createAccount(
             idLastFour
         );
 
-        // On a normal save failure, undo the just-created in-memory account.
+        // on a normal save failure, undo the just-created in-memory account.
         if (!saveToDatabaseFile()) {
-            accounts.pop_back();
+            accounts.pop_back(); // undo this account addition in memory
             return false;
         }
 
@@ -88,12 +90,13 @@ bool AccountManager::createAccount(
     }
 }
 
+// USER AUTHENTICATION AND LOGIN LOCKOUT
 Account* AccountManager::authenticateUser(
     const std::string& username,
     const std::string& password,
     std::string& statusMessage
 ) {
-    // Get or create the login-attempt record for the requested username.
+    // get or create the login-attempt record for the requested username.
     LoginAttemptState& state = loginAttempts[username];
     const auto now = std::chrono::steady_clock::now();
 
@@ -115,7 +118,7 @@ Account* AccountManager::authenticateUser(
         if (account != nullptr) {
             authenticated = account->authenticate(password);
         } else {
-            // Do roughly the same expensive password-hash work even when the username
+            // do roughly the same expensive password-hash work even when the username
             // does not exist. This reduces the obvious timing difference between
             // "known user" and "unknown user" login attempts.
             const std::vector<unsigned char> dummySalt(Crypto::SALT_LENGTH, 0xA5);
@@ -149,6 +152,7 @@ Account* AccountManager::authenticateUser(
     return nullptr;
 }
 
+// DATABASE LOADING - VALIDATE BEFORE COMMIT
 bool AccountManager::loadDatabaseFile() {
     std::ifstream input(databaseFileName);
 
@@ -163,7 +167,7 @@ bool AccountManager::loadDatabaseFile() {
         return false;
     }
 
-    // Load into a temporary collection before replacing the existing accounts.
+    // load into a temporary collection before replacing the existing accounts.
     std::vector<Account> loadedAccounts;
     std::string line;
     std::size_t lineNumber = 1;
@@ -176,7 +180,7 @@ bool AccountManager::loadDatabaseFile() {
             }
 
             const std::vector<std::string> fields = split(line, '|');
-            if (fields.size() != 7) {
+            if (fields.size() != 7) { // each record must contain exactly seven fields
                 throw std::runtime_error("Expected 7 fields on line " + std::to_string(lineNumber));
             }
 
@@ -224,15 +228,15 @@ bool AccountManager::loadDatabaseFile() {
         return false;
     }
 
-    // Commit the loaded accounts only after validation succeeds.
+    // commit the loaded accounts only after validation succeeds.
     accounts = std::move(loadedAccounts);
-    logger.log("DATABASE_LOADED");
+    logger.log("DATABASE_LOADED"); // record the successful database load
     return true;
 }
 
+///// DATABASE SAVE - WRITE TEMP FILE BEFORE REPLACING /////
 bool AccountManager::saveToDatabaseFile() const {
-    // Prepare a complete replacement before touching the real database.
-    // Write a complete temporary database so a failed write does not truncate the old file.
+    // prepare a complete replacement before touching the real database.
     const std::string tempFile = databaseFileName + ".tmp";
 
     try {
@@ -255,7 +259,7 @@ bool AccountManager::saveToDatabaseFile() const {
                    << account.getIDLastFour() << '\n';
         }
 
-        // Check for file-writing errors after closing the temporary file.
+        // check for file-writing errors after closing the temporary file.
         output.close();
 
         if (!output) {
@@ -266,8 +270,7 @@ bool AccountManager::saveToDatabaseFile() const {
             return false;
         }
 
-        // Replace the old file only after the new one has been written.
-        // Replace the original file only after finishing the temporary write.
+        // replace the old file only after the new one has been written.
         std::filesystem::rename(tempFile, databaseFileName);
 
         return true;
