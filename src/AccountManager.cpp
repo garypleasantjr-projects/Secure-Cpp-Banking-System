@@ -7,6 +7,8 @@
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <filesystem>
+#include <system_error>
 
 namespace {
 constexpr const char* DATABASE_HEADER = "SECURE_BANK_DB_V1";
@@ -222,27 +224,53 @@ bool AccountManager::loadDatabaseFile() {
 }
 
 bool AccountManager::saveToDatabaseFile() const {
-    std::ofstream output(databaseFileName, std::ios::trunc);
-    if (!output) {
-        std::cerr << "[ERROR] Could not open database file for writing.\n";
+    // Prepare a complete replacement before touching the real database.
+    const std::string tempFile = databaseFileName + ".tmp";
+
+    try {
+        std::ofstream output(tempFile);
+
+        if (!output) {
+            std::cerr << "[ERROR] Could not open temporary database file.\n";
+            return false;
+        }
+
+        output << DATABASE_HEADER << '\n';
+
+        for (const Account& account : accounts) {
+            output << account.getUsername() << '|'
+                   << Crypto::bytesToHex(account.getSalt()) << '|'
+                   << Crypto::bytesToHex(account.getPasswordHash()) << '|'
+                   << account.getPasswordIterations() << '|'
+                   << account.getBalanceCents() << '|'
+                   << account.getPrimaryIDType() << '|'
+                   << account.getIDLastFour() << '\n';
+        }
+
+        output.close();
+
+        if (!output) {
+            std::error_code ignored;
+            std::filesystem::remove(tempFile, ignored);
+
+            std::cerr << "[ERROR] Database write failed; old database kept.\n";
+            return false;
+        }
+
+        // Replace the old file only after the new one has been written.
+        std::filesystem::rename(tempFile, databaseFileName);
+
+        return true;
+
+    } catch (const std::exception& error) {
+        std::error_code ignored;
+        std::filesystem::remove(tempFile, ignored);
+
+        std::cerr << "[ERROR] Database save failed: " << error.what() << '\n';
         return false;
     }
-
-    output << DATABASE_HEADER << '\n';
-
-    for (const Account& account : accounts) {
-        output << account.getUsername() << '|'
-               << Crypto::bytesToHex(account.getSalt()) << '|'
-               << Crypto::bytesToHex(account.getPasswordHash()) << '|'
-               << account.getPasswordIterations() << '|'
-               << account.getBalanceCents() << '|'
-               << account.getPrimaryIDType() << '|'
-               << account.getIDLastFour() << '\n';
-    }
-
-    output.flush();
-    return output.good();
 }
+
 
 const std::string& AccountManager::whichDatabaseFile() const {
     return databaseFileName;
