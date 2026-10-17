@@ -13,6 +13,7 @@ Account::Account(
     const std::string& idLastFour
 )
     : username(username),
+      // New accounts receive a fresh random salt.
       salt(Crypto::generateSalt()),
       passwordHash(Crypto::generatePasswordHash(password, salt)),
       passwordIterations(Crypto::CURRENT_ITERATIONS),
@@ -35,6 +36,7 @@ Account::Account(
     const std::string& idLastFour
 )
     : username(username),
+      // Reloaded accounts must keep their saved salt to verify existing passwords.
       salt(salt),
       passwordHash(passwordHash),
       passwordIterations(passwordIterations),
@@ -95,11 +97,13 @@ void Account::changePassword(const std::string& newPassword) {
 
 bool Account::deposit(std::int64_t amountCents) {
     // Reject non-positive deposits and prevent signed integer overflow.
+    // Prevent nonpositive deposits and signed 64-bit overflow before adding.
     if (amountCents <= 0 ||
         amountCents > std::numeric_limits<std::int64_t>::max() - balanceCents) {
         return false;
     }
 
+    // Change the balance only after the validation succeeds.
     balanceCents += amountCents;
     return true;
 }
