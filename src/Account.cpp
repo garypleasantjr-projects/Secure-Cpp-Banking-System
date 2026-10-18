@@ -1,8 +1,8 @@
 #include "Account.h"
 #include "Crypto.h"
 
-#include <stdexcept>
 #include <limits>
+#include <stdexcept>
 
 
 Account::Account(
@@ -96,8 +96,7 @@ void Account::changePassword(const std::string& newPassword) {
 }
 
 bool Account::deposit(std::int64_t amountCents) {
-    // Reject non-positive deposits and prevent signed integer overflow
-    // Prevent nonpositive deposits and signed 64-bit overflow before adding
+    // Reject non-positive deposits and prevent signed 64-bit overflow before adding
     if (amountCents <= 0 ||
         amountCents > std::numeric_limits<std::int64_t>::max() - balanceCents) {
         return false;
