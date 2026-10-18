@@ -8,7 +8,7 @@
 
 int main() {
     try {
-        // Create the storage directory before opening its database and log files.
+        // Create the storage directory before opening its database and log files
         std::filesystem::create_directories("data");
 
         AuditLogger logger("data/audit.log");
@@ -20,7 +20,7 @@ int main() {
             return 1;
         }
 
-        // The UI handles menus; main handles startup and fatal errors.
+        // The UI handles menus; main handles startup and fatal errors
         BankingUI::run(manager, logger);
     } catch (const std::exception& error) {
         std::cerr << "[FATAL] " << error.what() << '\n';

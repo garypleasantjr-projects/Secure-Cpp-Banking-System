@@ -13,7 +13,7 @@ std::string readLine(const std::string& prompt) {
     std::cout << prompt;
     std::string value;
 
-    // Read the entire console line and report EOF or another input-stream failure.
+    // Read the entire console line and report EOF or another input-stream failure
     if (!std::getline(std::cin, value)) {
         throw std::runtime_error("Input stream closed unexpectedly.");
     }
@@ -29,12 +29,12 @@ int readChoice(const std::string& prompt, int min, int max) {
             std::size_t used = 0;
             const int value = std::stoi(text, &used);
 
-            // Require the whole input to be a valid menu number within the allowed range.
+            // Require the whole input to be a valid menu number within the allowed range
             if (used == text.size() && value >= min && value <= max) {
                 return value;
             }
         } catch (...) {
-            // The message below handles all malformed numeric input consistently.
+            // The message below handles all malformed numeric input consistently
         }
 
         std::cout << "[SYSTEM] Enter a number from " << min << " to " << max << ".\n";
@@ -46,7 +46,7 @@ bool validateUsername(const std::string& username) {
         return false;
     }
 
-    // Unsigned char keeps values valid for std::isalnum even when char is signed.
+    // Unsigned char keeps values valid for std::isalnum even when char is signed
     for (unsigned char character : username) {
         if (!std::isalnum(character) && character != '_' && character != '-' && character != '.') {
             return false;
@@ -61,7 +61,7 @@ bool validatePassword(const std::string& password) {
         return false;
     }
 
-    // Examine each password byte for control characters.
+    // Examine each password byte for control characters
     for (unsigned char character : password) {
         if (std::iscntrl(character)) {
             return false;
@@ -134,7 +134,7 @@ bool parseMoneyToCents(const std::string& text, std::int64_t& centsOut) {
         const std::int64_t dollars = std::stoll(dollarsPart);
         const std::int64_t cents = centsPart.empty() ? 0 : std::stoll(centsPart);
 
-        // Check for overflow before converting whole dollars to integer cents.
+        // Check for overflow before converting whole dollars to integer cents
         if (dollars > (std::numeric_limits<std::int64_t>::max() - cents) / 100) {
             return false;
         }
@@ -151,7 +151,7 @@ std::int64_t readMoneyCents(const std::string& prompt, bool allowZero) {
         const std::string text = readLine(prompt);
         std::int64_t cents = 0;
 
-        // Zero is accepted only when allowZero is true; transactions require positive money.
+        // Zero is accepted only when allowZero is true; transactions require positive money
         if (parseMoneyToCents(text, cents) && (allowZero ? cents >= 0 : cents > 0)) {
             return cents;
         }

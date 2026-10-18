@@ -6,10 +6,10 @@
 
 namespace Crypto {
 
-// PBKDF2 work factor for newly created or changed passwords.
+// PBKDF2 work factor for newly created or changed passwords
 constexpr int CURRENT_ITERATIONS = 600000;
 constexpr int KEY_LENGTH = 32;
-// Generate 16 random bytes; keep saved salts for older accounts.
+// Generate 16 random bytes; keep saved salts for older accounts
 constexpr int SALT_LENGTH = 16;
 
 std::vector<unsigned char> generateSalt();
@@ -24,7 +24,7 @@ bool constantTimeEqual(
     const std::vector<unsigned char>& right
 );
 
-// Hex is a text representation of bytes, not encryption.
+// Hex is a text representation of bytes, not encryption
 std::string bytesToHex(const std::vector<unsigned char>& bytes);
 std::vector<unsigned char> hexToBytes(const std::string& hex);
 

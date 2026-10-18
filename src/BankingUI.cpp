@@ -9,7 +9,7 @@
 #include <iostream>
 #include <string>
 
-// Private helpers are visible only inside this source file.
+// Private helpers are visible only inside this source file
 namespace {
 
 std::string idTypeName(int idType) {
@@ -31,20 +31,20 @@ void printMainMenu() {
               << "----------------------------------------\n";
 }
 
-// Collect a new account's information; the manager performs the actual save.
+// Collect a new account's information; the manager performs the actual save
 void createAccountFlow(AccountManager& manager) {
     std::string username;
     while (true) {
         username = InputHandling::readLine("New username: ");
 
-        // If the username is invalid, show a message and continue the input loop.
+        // If the username is invalid, show a message and continue the input loop
         if (!InputHandling::validateUsername(username)) {
             std::cout << "[SYSTEM] Username must be 3-24 characters and contain only "
                          "letters, numbers, '.', '_' or '-'.\n";
             continue;
         }
 
-        // Even valid characters cannot make a username that already exists.
+        // Even valid characters cannot make a username that already exists
         if (manager.checkDuplicateUsernames(username)) {
             std::cout << "[SYSTEM] That username is already taken.\n";
             continue;
@@ -101,7 +101,7 @@ void createAccountFlow(AccountManager& manager) {
     }
 }
 
-// The Account reference points to the account authenticated by the manager.
+// The Account reference points to the account authenticated by the manager
 void loggedInMenu(AccountManager& manager, Account& account, AuditLogger& logger) {
     while (true) {
         std::cout << "\n========================================\n"
@@ -173,7 +173,7 @@ void loggedInMenu(AccountManager& manager, Account& account, AuditLogger& logger
                 break;
             }
 
-            // Keep a copy of the password state for an in-memory rollback after a save failure.
+            // Keep a copy of the password state for an in-memory rollback after a save failure
             const Account oldAccount = account;
             account.changePassword(newPassword);
 
@@ -208,7 +208,7 @@ void loginFlow(AccountManager& manager, AuditLogger& logger) {
     Account* account = manager.authenticateUser(username, password, statusMessage);
     std::cout << "[SYSTEM] " << statusMessage << '\n';
 
-    // Only show account operations when authentication returns a valid pointer.
+    // Only show account operations when authentication returns a valid pointer
     if (account != nullptr) {
         loggedInMenu(manager, *account, logger);
     }
@@ -218,7 +218,7 @@ void loginFlow(AccountManager& manager, AuditLogger& logger) {
 
 namespace BankingUI {
 
-// This function runs the application's main menu until Exit is selected.
+// This function runs the application's main menu until Exit is selected
 void run(AccountManager& manager, AuditLogger& logger) {
     std::cout << "Created by Gary Pleasant\n"
               << "Educational secure-coding project - NOT a real banking system.\n"
