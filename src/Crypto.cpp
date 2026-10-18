@@ -12,10 +12,10 @@
 namespace Crypto {
 
 std::vector<unsigned char> generateSalt() {
-    // Allocate a byte buffer for cryptographic salt data.
+    // Allocate a byte buffer for cryptographic salt data
     std::vector<unsigned char> salt(SALT_LENGTH);
 
-    // OpenSSL fills the salt buffer with secure random bytes.
+    // OpenSSL fills the salt buffer with secure random bytes
     if (RAND_bytes(salt.data(), static_cast<int>(salt.size())) != 1) {
         ERR_print_errors_fp(stderr);
         throw std::runtime_error("Cryptographically secure salt generation failed.");
@@ -39,7 +39,7 @@ std::vector<unsigned char> generatePasswordHash(
 
     std::vector<unsigned char> hash(KEY_LENGTH);
 
-    // Derive a hash from password bytes, salt, iterations, SHA-256 and output length.
+    // Derive a hash from password bytes, salt, iterations, SHA-256 and output length
     const int success = PKCS5_PBKDF2_HMAC(
         password.data(),
         static_cast<int>(password.size()),
@@ -82,7 +82,7 @@ bool constantTimeEqual(
         return false;
     }
 
-    // Compare hash contents without stopping at the first differing byte.
+    // Compare hash contents without stopping at the first differing byte
     return CRYPTO_memcmp(left.data(), right.data(), left.size()) == 0;
 }
 
@@ -105,7 +105,7 @@ std::vector<unsigned char> hexToBytes(const std::string& hex) {
     std::vector<unsigned char> bytes;
     bytes.reserve(hex.size() / 2);
 
-    // Two hexadecimal digits encode one byte, so advance by two characters.
+    // Two hexadecimal digits encode one byte, so advance by two characters
     for (std::size_t i = 0; i < hex.size(); i += 2) {
         const std::string byteText = hex.substr(i, 2);
         std::size_t parsedCharacters = 0;

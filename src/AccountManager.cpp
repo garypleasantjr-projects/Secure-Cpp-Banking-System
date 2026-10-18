@@ -11,10 +11,10 @@
 #include <system_error>
 
 namespace {
-// Version marker: older or corrupted formats cannot silently be treated as valid.
+// Version marker: older or corrupted formats cannot silently be treated as valid
 constexpr const char* DATABASE_HEADER = "SECURE_BANK_DB_V1";
 
-// Divide the saved line into its pipe-separated fields.
+// Divide the saved line into its pipe-separated fields
 std::vector<std::string> split(const std::string& line, char delimiter) {
     std::vector<std::string> parts;
     std::stringstream stream(line);
@@ -65,7 +65,7 @@ bool AccountManager::createAccount(
     }
 
     try {
-        // Construct a new Account directly inside the manager's vector.
+        // Construct a new Account directly inside the manager's vector
         accounts.emplace_back(
             username,
             password,
@@ -74,7 +74,7 @@ bool AccountManager::createAccount(
             idLastFour
         );
 
-        // On a normal save failure, undo the just-created in-memory account.
+        // On a normal save failure, undo the just-created in-memory account
         if (!saveToDatabaseFile()) {
             accounts.pop_back();
             return false;
@@ -93,7 +93,7 @@ Account* AccountManager::authenticateUser(
     const std::string& password,
     std::string& statusMessage
 ) {
-    // Get or create the login-attempt record for the requested username.
+    // Get or create the login-attempt record for the requested username
     LoginAttemptState& state = loginAttempts[username];
     const auto now = std::chrono::steady_clock::now();
 
@@ -117,7 +117,7 @@ Account* AccountManager::authenticateUser(
         } else {
             // Do roughly the same expensive password-hash work even when the username
             // does not exist. This reduces the obvious timing difference between
-            // "known user" and "unknown user" login attempts.
+            // "known user" and "unknown user" login attempts
             const std::vector<unsigned char> dummySalt(Crypto::SALT_LENGTH, 0xA5);
             (void)Crypto::generatePasswordHash(password, dummySalt);
         }
@@ -153,7 +153,7 @@ bool AccountManager::loadDatabaseFile() {
     std::ifstream input(databaseFileName);
 
     if (!input) {
-        // A missing database on first launch is normal. Start empty.
+        // A missing database on first launch is normal. Start empty
         return true;
     }
 
@@ -163,7 +163,7 @@ bool AccountManager::loadDatabaseFile() {
         return false;
     }
 
-    // Load into a temporary collection before replacing the existing accounts.
+    // Load into a temporary collection before replacing the existing accounts
     std::vector<Account> loadedAccounts;
     std::string line;
     std::size_t lineNumber = 1;
@@ -224,15 +224,15 @@ bool AccountManager::loadDatabaseFile() {
         return false;
     }
 
-    // Commit the loaded accounts only after validation succeeds.
+    // Commit the loaded accounts only after validation succeeds
     accounts = std::move(loadedAccounts);
     logger.log("DATABASE_LOADED");
     return true;
 }
 
 bool AccountManager::saveToDatabaseFile() const {
-    // Prepare a complete replacement before touching the real database.
-    // Write a complete temporary database so a failed write does not truncate the old file.
+    // Prepare a complete replacement before touching the real database
+    // Write a complete temporary database so a failed write does not truncate the old file
     const std::string tempFile = databaseFileName + ".tmp";
 
     try {
@@ -255,7 +255,7 @@ bool AccountManager::saveToDatabaseFile() const {
                    << account.getIDLastFour() << '\n';
         }
 
-        // Check for file-writing errors after closing the temporary file.
+        // Check for file-writing errors after closing the temporary file
         output.close();
 
         if (!output) {
@@ -266,8 +266,8 @@ bool AccountManager::saveToDatabaseFile() const {
             return false;
         }
 
-        // Replace the old file only after the new one has been written.
-        // Replace the original file only after finishing the temporary write.
+        // Replace the old file only after the new one has been written
+        // Replace the original file only after finishing the temporary write
         std::filesystem::rename(tempFile, databaseFileName);
 
         return true;
