@@ -58,7 +58,9 @@ The current version adds or completes:
 - versioned file persistence
 - fail-closed database loading
 - CMake
-- automated tests
+- explicit runtime tests covering core logic, persistence, malformed data, overflow, and lockout behavior
+- GitHub Actions CI
+- a separate `BankingUI` module so `main.cpp` stays focused on startup/fatal-error handling
 - OWASP/CWE-oriented security documentation
 
 The important progression is not simply “more code.” It is the move from making features work to asking:
@@ -143,8 +145,10 @@ Understand:
 - what the temporary lockout does
 - why a dummy PBKDF2 calculation is performed for an unknown username
 - how the database is parsed
+- why numeric fields must be consumed completely instead of accepting trailing junk
 - why malformed records cause the load to fail
 - why the program loads into a temporary vector before replacing the live account list
+- why saves are written to a temporary file before replacing the live database
 - how save failures cause in-memory operations to be rolled back
 
 Key idea:
@@ -164,11 +168,11 @@ Key idea:
 
 > Logging is a security control only when the log contains useful events without leaking secrets.
 
-### Step 6 — `main.cpp`
+### Step 6 — `BankingUI` and `main.cpp`
 
-Study `main.cpp` last.
+Study the UI module and `main.cpp` last.
 
-By this point, it should read mostly as orchestration:
+`BankingUI.cpp` owns the interactive application flow:
 
 - display menus
 - collect input
@@ -176,7 +180,9 @@ By this point, it should read mostly as orchestration:
 - call account/account-manager operations
 - display results
 
-That is preferable to placing cryptography, parsing, persistence, and business logic directly inside one giant `main()` function.
+`main.cpp` is intentionally smaller. It creates the data directory, constructs the logger and manager, loads persisted state, starts the UI, and catches fatal exceptions.
+
+That separation keeps presentation/orchestration code away from cryptography, persistence, and account logic.
 
 ---
 
@@ -281,37 +287,27 @@ The application has no HTTP layer, browser, SQL database, or web framework, so c
 
 ---
 
-## 5. Known limitations and “Do Later” engineering improvements
+## 5. Current status and remaining “Do Later” engineering improvements
 
-These are intentionally documented as future work rather than hidden. They are useful follow-up exercises because each one connects to a real software-engineering concept.
+Several items from the first review have now been implemented. Keeping both completed and remaining items documented makes the progression visible.
 
-### Do later 1 — Make database writes atomic
+### Completed — Safer database replacement
 
-**Current behavior:** `saveToDatabaseFile()` opens the real database with `std::ios::trunc` and writes directly to it.
+`saveToDatabaseFile()` now writes a complete `.tmp` database first, closes and checks that file, and only then replaces the live database. POSIX builds use same-directory rename semantics; Windows builds use `MoveFileEx` with replacement enabled.
 
-**Problem:** if the write fails after truncation, the old database may already be damaged or partially replaced. Rolling back the in-memory balance does not restore the previous on-disk file.
+This is safer than truncating the live file before the new contents are ready. It is still an educational persistence layer rather than a fully crash-durable transactional database, because the project does not implement directory/file `fsync`-style durability guarantees.
 
-**Improvement:** write the complete new database to a temporary file, verify/flush it, then atomically rename/replace the real database.
+**What this teaches:** crash consistency, transactional thinking, and platform-specific filesystem behavior.
 
-**What this teaches:** crash consistency, transactional updates, and safe persistence.
+### Completed — Strict numeric-field parsing
 
-### Do later 2 — Require full numeric-field parsing
-
-**Current behavior:** database loading uses `std::stoi` / `std::stoll` without checking how many characters were consumed.
-
-**Problem:** a field such as `600000junk` can be parsed as the numeric prefix `600000` instead of being rejected as fully malformed.
-
-**Improvement:** capture the parsed-character count and require it to equal the entire string length, or use `std::from_chars`.
+Database integer fields now require the entire saved field to be consumed by `std::stoi` / `std::stoll`. Values such as `600000junk` are rejected instead of accepting only the numeric prefix.
 
 **What this teaches:** strict parser design and input canonicalization.
 
-### Do later 3 — Check balance arithmetic for integer overflow
+### Completed — Balance overflow protection
 
-**Current behavior:** `deposit()` adds directly to `balanceCents`.
-
-**Problem:** an extremely large deposit could overflow `std::int64_t`.
-
-**Improvement:** check `amountCents <= INT64_MAX - balanceCents` before addition.
+`Account::deposit()` checks the requested amount against the remaining `std::int64_t` range before addition, so an oversized deposit is rejected instead of overflowing the stored balance.
 
 **What this teaches:** numeric boundary validation and integer-overflow prevention.
 
@@ -386,33 +382,24 @@ These are intentionally documented as future work rather than hidden. They are u
 
 **What this teaches:** logging, monitoring, and alerting are different controls.
 
-### Do later 10 — Expand automated testing
+### Partially completed — Expand automated testing
 
-The current test covers core validation, cryptography, account authentication, deposits/withdrawals, and password changes.
+The test executable now uses explicit runtime checks instead of `assert()`, so Release builds cannot silently disable the checks through `NDEBUG`. Coverage now includes core validation, cryptography, account behavior, integer-overflow rejection, persistence round trips, duplicate usernames, temporary lockout behavior, and malformed numeric database fields.
 
-Add tests for:
+Useful remaining tests include:
 
-- database round trips
-- malformed database lines
-- partial/failed saves
-- login lockout behavior
-- duplicate accounts
-- integer-overflow boundaries
-- audit logging
+- simulated partial/failed saves
+- audit-log contents and failure behavior
 - password-work-factor migration
-
-Also replace or supplement `assert()` with a small test framework or explicit test checks so Release builds cannot disable the test assertions through `NDEBUG`.
+- additional malformed database cases
 
 **What this teaches:** security controls need regression tests.
 
-### Do later 11 — Add CI
+### Completed — Add CI
 
-Add a GitHub Actions workflow that:
+The repository now contains a GitHub Actions workflow that configures CMake, builds the project, and runs `ctest` for pull requests and pushes to `main`.
 
-1. configures CMake
-2. builds the project
-3. runs `ctest`
-4. optionally runs static analysis
+A useful next CI improvement is to add static analysis and dependency/security scanning.
 
 **What this teaches:** repeatable verification and software supply-chain hygiene.
 
@@ -429,9 +416,10 @@ The repository uses:
 - CMake for reproducible builds
 - `.gitignore` for generated/runtime files
 - Markdown documentation
+- GitHub Actions CI
 - Git branches
 - commits
-- a pull request
+- pull requests
 - merge into `main`
 
 Those practices are separate from C++ syntax, but they are part of working on software in a team.
@@ -459,7 +447,7 @@ Before using this project heavily in an interview, I should be able to answer th
 15. What are the limitations of that lockout?
 16. What does the audit log record, and what should never be logged?
 17. Why is the database still tamperable even though passwords are hashed?
-18. Why is direct truncating file output weaker than an atomic temp-file replacement?
+18. Why is a temporary-file replacement safer than truncating the live database first, and what crash-durability limits still remain?
 19. What security properties does this project *not* provide?
 20. What would I build next if this became a networked application?
 
@@ -472,15 +460,15 @@ If I can explain those clearly, I understand the important engineering ideas beh
 A good next sequence would be:
 
 1. understand and explain every current module
-2. fix the strict numeric parsing issue
-3. add overflow checks
-4. make file saving atomic
-5. expand tests
-6. add GitHub Actions CI
-7. move persistence to SQLite
-8. add a small API/service layer
-9. threat-model the networked version
-10. add API authentication/authorization and application-security testing
+2. add tests for failed saves and audit-log behavior
+3. enforce more invariants inside the domain classes
+4. improve rate-limit state lifecycle and cleanup
+5. move persistence to SQLite
+6. add static analysis and dependency scanning to CI
+7. add a small API/service layer
+8. threat-model the networked version
+9. add API authentication/authorization and application-security testing
+10. design credential-policy/work-factor migration
 
 That progression naturally connects this C++ project to later work in:
 
