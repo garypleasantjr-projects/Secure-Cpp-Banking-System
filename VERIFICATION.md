@@ -1,34 +1,56 @@
 # Verification
 
-The finished project was compiled and tested in the working environment with:
+Current verification is designed to be repeatable from the repository itself.
 
-- GCC/G++ 14.2
-- OpenSSL 3.5.7
-- CMake
+## Local verification
 
-Verification commands:
+Requirements:
+
+- C++17 compiler
+- CMake 3.16+
+- OpenSSL development libraries
+
+Commands:
 
 ```bash
-cmake -S . -B build
-cmake --build build -j2
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --parallel 2
 ctest --test-dir build --output-on-failure
 ```
 
-Result at packaging time:
+The current test executable uses explicit runtime checks rather than `assert()`, so the checks are not disabled by `NDEBUG`.
 
-```text
-100% tests passed, 0 tests failed out of 1
-```
+Coverage includes:
 
-A scripted smoke test also verified:
+- username/password/identifier validation
+- money parsing
+- PBKDF2 derivation and constant-time comparison
+- password changes
+- deposits and withdrawals
+- signed 64-bit deposit overflow rejection
+- database persistence and reload
+- duplicate-username rejection
+- temporary authentication lockout
+- rejection of malformed numeric database fields
+
+## GitHub Actions
+
+`.github/workflows/ci.yml` runs the configure, build, and CTest sequence on pull requests and pushes to `main`.
+
+This keeps the verification status tied to the current commit instead of preserving a stale one-time packaging result.
+
+## Manual smoke testing
+
+A useful manual smoke test should still cover the interactive path:
 
 - account creation
 - database persistence
-- successful login
+- successful and failed login
 - balance display
-- deposit
+- deposit and withdrawal
+- password change
 - masked profile display
 - logout
 - audit-log creation
 
-Generated test database and audit-log files were removed before packaging.
+The automated tests do not claim to replace full end-to-end or production security testing.
