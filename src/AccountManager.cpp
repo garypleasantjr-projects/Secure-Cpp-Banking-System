@@ -3,12 +3,16 @@
 #include "InputHandling.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
-#include <filesystem>
 #include <system_error>
+
+#if defined(_WIN32)
+#include <windows.h>
+#endif
 
 namespace {
 // Version marker: older or corrupted formats cannot silently be treated as valid
@@ -25,6 +29,65 @@ std::vector<std::string> split(const std::string& line, char delimiter) {
     }
 
     return parts;
+}
+
+int parseIntStrict(
+    const std::string& text,
+    const std::string& fieldName,
+    std::size_t lineNumber
+) {
+    try {
+        std::size_t used = 0;
+        const int value = std::stoi(text, &used, 10);
+
+        if (used != text.size()) {
+            throw std::runtime_error("trailing characters");
+        }
+
+        return value;
+    } catch (const std::exception&) {
+        throw std::runtime_error(
+            "Invalid " + fieldName + " on line " + std::to_string(lineNumber)
+        );
+    }
+}
+
+std::int64_t parseInt64Strict(
+    const std::string& text,
+    const std::string& fieldName,
+    std::size_t lineNumber
+) {
+    try {
+        std::size_t used = 0;
+        const std::int64_t value = std::stoll(text, &used, 10);
+
+        if (used != text.size()) {
+            throw std::runtime_error("trailing characters");
+        }
+
+        return value;
+    } catch (const std::exception&) {
+        throw std::runtime_error(
+            "Invalid " + fieldName + " on line " + std::to_string(lineNumber)
+        );
+    }
+}
+
+bool replaceDatabaseFile(
+    const std::string& temporaryFile,
+    const std::string& databaseFile
+) {
+#if defined(_WIN32)
+    return MoveFileExA(
+        temporaryFile.c_str(),
+        databaseFile.c_str(),
+        MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH
+    ) != 0;
+#else
+    std::error_code error;
+    std::filesystem::rename(temporaryFile, databaseFile, error);
+    return !error;
+#endif
 }
 }
 
@@ -183,9 +246,10 @@ bool AccountManager::loadDatabaseFile() {
             const std::string& username = fields[0];
             const std::vector<unsigned char> salt = Crypto::hexToBytes(fields[1]);
             const std::vector<unsigned char> hash = Crypto::hexToBytes(fields[2]);
-            const int iterations = std::stoi(fields[3]);
-            const std::int64_t balanceCents = std::stoll(fields[4]);
-            const int idType = std::stoi(fields[5]);
+            const int iterations = parseIntStrict(fields[3], "iteration count", lineNumber);
+            const std::int64_t balanceCents =
+                parseInt64Strict(fields[4], "balance", lineNumber);
+            const int idType = parseIntStrict(fields[5], "identifier type", lineNumber);
             const std::string& idLastFour = fields[6];
 
             if (!InputHandling::validateUsername(username)
@@ -231,7 +295,6 @@ bool AccountManager::loadDatabaseFile() {
 }
 
 bool AccountManager::saveToDatabaseFile() const {
-    // Prepare a complete replacement before touching the real database
     // Write a complete temporary database so a failed write does not truncate the old file
     const std::string tempFile = databaseFileName + ".tmp";
 
@@ -266,12 +329,16 @@ bool AccountManager::saveToDatabaseFile() const {
             return false;
         }
 
-        // Replace the old file only after the new one has been written
-        // Replace the original file only after finishing the temporary write
-        std::filesystem::rename(tempFile, databaseFileName);
+        // Replace the original only after the complete temporary file is ready
+        if (!replaceDatabaseFile(tempFile, databaseFileName)) {
+            std::error_code ignored;
+            std::filesystem::remove(tempFile, ignored);
+
+            std::cerr << "[ERROR] Could not replace the existing database safely.\n";
+            return false;
+        }
 
         return true;
-
     } catch (const std::exception& error) {
         std::error_code ignored;
         std::filesystem::remove(tempFile, ignored);
@@ -280,7 +347,6 @@ bool AccountManager::saveToDatabaseFile() const {
         return false;
     }
 }
-
 
 const std::string& AccountManager::whichDatabaseFile() const {
     return databaseFileName;
