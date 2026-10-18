@@ -80,7 +80,8 @@ The project was upgraded with several decisions that are easy to understand but 
 The finished project adds:
 
 - CMake build configuration
-- a small automated test program
+- automated core and persistence/security regression tests
+- GitHub Actions CI for build-and-test verification
 - security documentation
 - a learning guide explaining why each improvement was made
 - audit logging
@@ -168,6 +169,9 @@ Authoritative references used for the security design discussion:
 
 ```text
 Secure-Cpp-Banking-System/
+├── .github/
+│   └── workflows/
+│       └── ci.yml
 ├── CMakeLists.txt
 ├── README.md
 ├── SECURITY_DESIGN.md
@@ -264,7 +268,7 @@ Good next steps, after fully understanding this version:
 5. Add unit tests for database loading and lockout behavior.
 6. Add a network/API layer only after the local security model is understood.
 7. Consider Argon2id where an appropriate library/deployment environment is available.
-8. Add dependency scanning and CI tests through GitHub Actions.
+8. Add dependency scanning and static analysis to the existing GitHub Actions CI workflow.
 
 ---
 
